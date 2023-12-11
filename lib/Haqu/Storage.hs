@@ -1,11 +1,12 @@
 module Haqu.Storage where
 
-import System.Directory (listDirectory, doesDirectoryExist, createDirectory, doesFileExist, removeFile)
-import System.FilePath (takeExtension, dropExtensions, (</>))
+import System.Directory (listDirectory)
+    --doesDirectoryExist, createDirectory, doesFileExist, removeFile
+import Data.List (find)
 
 
 data QuizOverview = MkQuizOverview {
-    qId :: [Char],
+    qId :: String,
     name :: String,
     desc :: String,
     link :: String
@@ -15,30 +16,60 @@ data QuizOverview = MkQuizOverview {
 getQuizFilesFromData :: FilePath -> IO [FilePath]
 getQuizFilesFromData directory = do
     files <- listDirectory directory
-    let filteredFiles = filter (\file -> takeExtension file == ".txt") files
+    -- TODO filter broken, fix
+    let filteredFiles = filter (\file -> getExtension file == ".txt") files
     return filteredFiles
 
 
-getQuizDicts :: FilePath -> IO [(FilePath, String)]
+getQuizDicts :: FilePath -> IO [(FilePath, [String])]
 getQuizDicts path = do
     files <- getQuizFilesFromData path
-    fileContents <- parseFiles (map (path </>) files)
-    let splitString = map lines fileContents
-    let quizIds = map dropExtensions files
-    let dictQuiz = zip quizIds fileContents
+    fileContents <- parseFiles (map ((path ++) . ("/"++)) files)
+    let quizIds = map removeFileExtension files
+    let splitNewLine = map lines fileContents
+    let dictQuiz = zip quizIds splitNewLine
 
     return dictQuiz
+
 
 getQuizOverviews :: FilePath -> IO [QuizOverview]
 getQuizOverviews path = do
     quizDicts <- getQuizDicts path
-    -- TODO create quiz overviews
-    return [MkQuizOverview {qId= "d", name="td", desc="td", link="td"}]
+    let quizoverviews = createQuizOverview quizDicts
 
-createQuizOverview :: [([Char], String)] -> [QuizOverview]
+    return quizoverviews
+
+
+createQuizOverview :: [([Char], [String])] -> [QuizOverview]
 createQuizOverview [] = []
-createQuizOverview [x] = [MkQuizOverview {qId= fst x, name="td", desc="td", link="td"}]
-createQuizOverview ((id, content):xs) = MkQuizOverview {qId=id, name="td", desc="td", link="td"} : createQuizOverview xs
+createQuizOverview [(quizId, content)] =
+    [MkQuizOverview {
+        qId=quizId,
+        name= findValue "NAME:" content,
+        desc= findValue "DESC:" content,
+        link="/quiz/" ++ quizId ++ "/start"}]
+    where
+        findValue :: String -> [String] -> String
+        findValue key = maybe "Key not found" (drop (length key)) . find (startsWith key)
+
+        startsWith :: Eq a => [a] -> [a] -> Bool
+        startsWith prefix x = take (length prefix) x == prefix
+createQuizOverview (x:xs) = createQuizOverview [x] ++ createQuizOverview xs
+
+
+-- TODO fix this
+getExtension :: FilePath -> FilePath
+getExtension filePath =
+  case reverse filePath of
+    [] -> ""
+    (x:xs) -> if x /= '.' && elem '.' filePath
+              then x : getExtension (reverse xs)
+              else ""
+
+
+removeFileExtension :: FilePath -> FilePath
+removeFileExtension path = 
+    reverse (dropWhile (/='.') (reverse path))
 
 
 parseFiles :: [FilePath] -> IO [String]
@@ -48,6 +79,3 @@ parseFiles (f:fs) = do
     file <- readFile f
     otherfiles <- parseFiles fs
     return (file : otherfiles)
-
-
--- MkQuiz {qId=1, name="Test", description="Yada", link="loc"}
