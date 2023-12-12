@@ -17,7 +17,7 @@ getQuizFilesFromData :: FilePath -> IO [FilePath]
 getQuizFilesFromData directory = do
     files <- listDirectory directory
     -- TODO filter broken, fix
-    let filteredFiles = filter (\file -> getExtension file == ".txt") files
+    let filteredFiles = filter (\file -> getExtension file == "txt") files
     return filteredFiles
 
 
@@ -37,8 +37,16 @@ getQuizOverviews path = do
     quizDicts <- getQuizDicts path
     let quizoverviews = createQuizOverview quizDicts
 
-    return quizoverviews
+    return $ reverse quizoverviews
 
+
+getNameById :: String -> IO String
+getNameById quizId = do
+    file <- readFile ("./data/" ++ quizId ++ ".txt")
+    return $ findValue "NAME:" (lines file)
+
+
+--helper methods
 
 createQuizOverview :: [([Char], [String])] -> [QuizOverview]
 createQuizOverview [] = []
@@ -47,29 +55,26 @@ createQuizOverview [(quizId, content)] =
         qId=quizId,
         name= findValue "NAME:" content,
         desc= findValue "DESC:" content,
-        link="/quiz/" ++ quizId ++ "/start"}]
-    where
-        findValue :: String -> [String] -> String
-        findValue key = maybe "Key not found" (drop (length key)) . find (startsWith key)
-
-        startsWith :: Eq a => [a] -> [a] -> Bool
-        startsWith prefix x = take (length prefix) x == prefix
+        link="/quiz/" ++ quizId ++ "/start"}]        
 createQuizOverview (x:xs) = createQuizOverview [x] ++ createQuizOverview xs
 
 
--- TODO fix this
+findValue :: String -> [String] -> String
+findValue key =
+    maybe "Key not found" (drop (length key)) . find (startsWith key)
+
+
+startsWith :: Eq a => [a] -> [a] -> Bool
+startsWith prefix x = take (length prefix) x == prefix
+
+
 getExtension :: FilePath -> FilePath
 getExtension filePath =
-  case reverse filePath of
-    [] -> ""
-    (x:xs) -> if x /= '.' && elem '.' filePath
-              then x : getExtension (reverse xs)
-              else ""
+    takeWhile (/= '.') (fst (break (=='/') (reverse filePath)))
 
 
 removeFileExtension :: FilePath -> FilePath
-removeFileExtension path = 
-    reverse (dropWhile (/='.') (reverse path))
+removeFileExtension = takeWhile (/='.')
 
 
 parseFiles :: [FilePath] -> IO [String]

@@ -7,7 +7,6 @@ import Control.Monad.IO.Class (liftIO)
 import qualified Data.Text.Lazy as LT
 import Data.List (intersperse)
 import Haqu.Storage
-import GHC.IO (unsafePerformIO)
 
 type Html = String
 
@@ -18,6 +17,15 @@ main = scotty 3000 $ do
 
   get  "/styles.css" styles
   get  "/" homeAction
+  get  "/quiz/:id/start" startAction
+  post "/quiz/:id/start" postQuizStart
+
+  -- questions
+  get "/quiz/:id/:question?player=name" quizQuestionByIdForPlayer
+  post "/quiz/:id/:question?player=name" postQuestionByIdForPlayer
+
+  -- results
+  get "/quiz/:id/result" getQuizResultsById
 
 
 styles :: ActionM ()
@@ -30,15 +38,39 @@ homeAction :: ActionM ()
 homeAction = do
     liftIO (putStrLn "DEBUG: Home Action Called")
     let title = e "H1" "haqu"
-
-    -- check if unsafePerformIO doesn't bring side effects
-    let quizoverviews = unsafePerformIO (getQuizOverviews "./data/")
+    quizoverviews <- liftIO $ getQuizOverviews "./data/"
     let listEntries = map generateOverviewHtml quizoverviews
-    let concatEntries = concat listEntries
-    -- ok: let singleHtml = generateOverviewHtml MkQuizOverview{qId="1", name="aa", desc="bb", link="cc"}
-    
+    let concatEntries = concat listEntries    
     let htmlOverviews = ea "ul" [] concatEntries 
     htmlString $ title ++ htmlOverviews
+
+
+startAction :: ActionM ()
+startAction = do
+  pathId <- captureParam "id"
+  name <- liftIO $ getNameById pathId
+  let form = ea "form"
+  htmlString $ e "H1" "haqu"
+  
+
+postQuizStart :: ActionM ()
+postQuizStart = do
+  htmlString $ e "to" "do"
+
+
+quizQuestionByIdForPlayer :: ActionM ()
+quizQuestionByIdForPlayer = do
+  htmlString $ e "To" "Do"
+
+
+postQuestionByIdForPlayer :: ActionM ()
+postQuestionByIdForPlayer = do
+  htmlString $ e "To" "Do"
+
+
+getQuizResultsById :: ActionM ()
+getQuizResultsById = do
+  htmlString $ e "To" "Do"
 
 
 generateOverviewHtml :: QuizOverview -> Html
