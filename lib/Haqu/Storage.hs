@@ -4,19 +4,20 @@ import System.Directory (listDirectory)
     --doesDirectoryExist, createDirectory, doesFileExist, removeFile
 import Data.List (find)
 
-
-data QuizOverview = MkQuizOverview {
-    qId :: String,
-    name :: String,
-    desc :: String,
-    link :: String
-} deriving (Show)
+import Haqu.Models ( QuizOverview(..) )
 
 
+
+-- create
+createPlayerFile :: String -> String -> ()
+createPlayerFile quizId playername = 
+    let a = "a" in () 
+
+
+-- read
 getQuizFilesFromData :: FilePath -> IO [FilePath]
 getQuizFilesFromData directory = do
     files <- listDirectory directory
-    -- TODO filter broken, fix
     let filteredFiles = filter (\file -> getExtension file == "txt") files
     return filteredFiles
 

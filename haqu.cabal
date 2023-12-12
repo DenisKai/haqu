@@ -21,7 +21,7 @@ common common-properties
 
 library
   import:              common-properties
-  exposed-modules:     Haqu.Web, Haqu.Storage
+  exposed-modules:     Haqu.Web, Haqu.Storage, Haqu.View, Haqu.Models
   build-depends:       
   hs-source-dirs:      lib
 

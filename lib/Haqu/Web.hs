@@ -5,8 +5,10 @@ import Web.Scotty
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.Text.Lazy as LT
-import Data.List (intersperse)
 import Haqu.Storage
+    ( getQuizOverviews,
+      getNameById )
+import Haqu.View
 
 type Html = String
 
@@ -37,30 +39,42 @@ styles = do
 homeAction :: ActionM ()
 homeAction = do
     liftIO (putStrLn "DEBUG: Home Action Called")
-    let title = e "H1" "haqu"
     quizoverviews <- liftIO $ getQuizOverviews "./data/"
     let listEntries = map generateOverviewHtml quizoverviews
     let concatEntries = concat listEntries    
-    let htmlOverviews = ea "ul" [] concatEntries 
-    htmlString $ title ++ htmlOverviews
+    let htmlOverviews = generateUnorderedList concatEntries 
+    htmlString $ generateHeader ++ htmlOverviews
 
 
 startAction :: ActionM ()
 startAction = do
   pathId <- captureParam "id"
-  name <- liftIO $ getNameById pathId
-  let form = ea "form"
-  htmlString $ e "H1" "haqu"
+  quizName <- liftIO $ getNameById pathId
+  let title = generateTitle quizName
+  let form = generateFormHtml pathId
+  htmlString $ generateHeader ++ title ++ form
   
 
 postQuizStart :: ActionM ()
 postQuizStart = do
-  htmlString $ e "to" "do"
+  qId <- captureParam "id"
+  playername <- formParam "playername"
+
+  -- create player file here
+
+  -- redirect to first question
+  redirect $ LT.pack ("/quiz/" ++ qId ++ "/" ++ "0" ++ "?player=" ++ playername)
 
 
 quizQuestionByIdForPlayer :: ActionM ()
 quizQuestionByIdForPlayer = do
-  htmlString $ e "To" "Do"
+  qId <- captureParam "id"
+  -- TODO get right para
+  questionNo <- captureParam "question"
+  player <- queryParam "player"
+
+
+  htmlString $ e "To" (qId ++ questionNo ++ player)
 
 
 postQuestionByIdForPlayer :: ActionM ()
@@ -73,27 +87,5 @@ getQuizResultsById = do
   htmlString $ e "To" "Do"
 
 
-generateOverviewHtml :: QuizOverview -> Html
-generateOverviewHtml quiz = 
-  e "li" (
-    ea "b" [] ("[" ++ qId quiz ++ "] ")
-    ++ ea "b" [] (name quiz ++ ": ")
-    ++ desc quiz ++ " " 
-    ++ ea "a" [("href", link quiz)] "Start quiz"
-  )
-
-
 htmlString :: String -> ActionM ()
 htmlString = html . LT.pack
-
-
--- Html DSL
-e :: String -> Html -> Html
-e tag = ea tag []
-
-
-ea :: String -> [(String, String)] -> Html -> Html
-ea tag attrs kids = concat $ ["<", tag] ++ attrsHtml attrs ++ [">", kids, "</", tag, ">"]
-  where attrsHtml [] = []
-        attrsHtml as = " " : intersperse " " (map attrHtml as)
-        attrHtml (key, value) = key ++ "='" ++ value ++ "'"
