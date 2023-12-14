@@ -1,7 +1,8 @@
 module Haqu.View where
 
 import Data.List (intersperse)
-import Haqu.Models (QuizOverview (..))
+import Haqu.Storage (QuizOverview (..), Question (qType, answerTexts, question))
+
 
 type Html = String
 
@@ -37,11 +38,11 @@ generateOverviewHtml quiz =
 generateFormHtml :: String -> Html
 generateFormHtml quizId = let
     breakTag = e "br" []
-    labelinput = ea "label" [("for", "playername")] "Please enter your name:"
+    labelinput = ea "label" [("for", "player")] "Please enter your name:"
     textinput = ea "input" [
         ("type", "text"), 
-        ("id", "playername"), 
-        ("name", "playername")] ""
+        ("id", "player"), 
+        ("name", "player")] ""
     submit = ea "input" [
         ("type", "submit"), 
         ("value", "Start Quiz")] ""
@@ -50,13 +51,51 @@ generateFormHtml quizId = let
         ("method", "post")] 
         (labelinput ++ breakTag ++ textinput ++ breakTag ++ submit)
     in form
-    
-
 
 
 -- questions
+generateQuestionHtml :: String -> String -> String -> Question -> Html
+generateQuestionHtml q_Id qNo player quest = let
+    qText = generateTitle (question quest)
+    answers = generateAnswersHtml (qType quest) (answerTexts quest)
+    submit = ea "input" [
+        ("type", "submit"), 
+        ("value", "Submit Answer")] ""
+    form = ea "form" [
+        ("action", "/quiz/" ++ q_Id ++ "/" ++ qNo ++ "?player=" ++ player), 
+        ("method", "post")] 
+        (qText ++ answers ++ submit)
+    in form
 
 
+-- answers
+generateAnswersHtml :: String -> [String] -> Html
+generateAnswersHtml q_Type answers = if q_Type == "SINGLECHOICE"
+  then generateSingelChoiceAnswerHtml 0 answers
+  else generateFalseTrueAnswerHtml
+
+
+generateSingelChoiceAnswerHtml :: Int -> [String] -> Html
+generateSingelChoiceAnswerHtml _ [] = []
+generateSingelChoiceAnswerHtml aNo (x:xs) = let
+  breakHtml = e "br" []
+  inputHtml = ea "input" [
+    ("type", "radio"), 
+    ("id", show aNo),
+    ("name", "answer"),
+    ("value", show aNo)] ""
+  labelHtml = ea "label" [("for", show aNo)] x
+  in inputHtml ++ labelHtml ++ breakHtml ++ generateSingelChoiceAnswerHtml (aNo + 1) xs
+
+
+generateFalseTrueAnswerHtml :: Html
+generateFalseTrueAnswerHtml =
+  ea "input" [("type", "radio"), ("id", "true"), ("name", "answer"), ("value", "True")] ""
+  ++ ea "label" [("for", "true")] "True"
+  ++ e "br" []
+  ++ ea "input" [("type", "radio"), ("id", "false"), ("name", "answer"), ("value", "False")] ""
+  ++ ea "label" [("for", "false")] "False"
+  ++ e "br" []
 
 -- results
 

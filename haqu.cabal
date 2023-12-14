@@ -25,7 +25,6 @@ library
   build-depends:       
   hs-source-dirs:      lib
 
-
 executable haqu
   import:              common-properties
   main-is:             Main.hs

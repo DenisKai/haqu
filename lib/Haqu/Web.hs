@@ -7,7 +7,7 @@ import Control.Monad.IO.Class (liftIO)
 import qualified Data.Text.Lazy as LT
 import Haqu.Storage
     ( getQuizOverviews,
-      getNameById )
+      getNameById, createPlayerFile, readQuizFileById )
 import Haqu.View
 
 type Html = String
@@ -19,15 +19,15 @@ main = scotty 3000 $ do
 
   get  "/styles.css" styles
   get  "/" homeAction
-  get  "/quiz/:id/start" startAction
-  post "/quiz/:id/start" postQuizStart
+  get  "/quiz/:quiz/start" startAction
+  post "/quiz/:quiz/start" postQuizStart
 
   -- questions
-  get "/quiz/:id/:question?player=name" quizQuestionByIdForPlayer
-  post "/quiz/:id/:question?player=name" postQuestionByIdForPlayer
+  get "/quiz/:quiz/:question?player=" quizQuestionByIdForPlayer
+  post "/quiz/:quiz/:question?player=" postQuestionByIdForPlayer
 
   -- results
-  get "/quiz/:id/result" getQuizResultsById
+  get "/quiz/:quiz/result" getQuizResultsById
 
 
 styles :: ActionM ()
@@ -41,45 +41,56 @@ homeAction = do
     liftIO (putStrLn "DEBUG: Home Action Called")
     quizoverviews <- liftIO $ getQuizOverviews "./data/"
     let listEntries = map generateOverviewHtml quizoverviews
-    let concatEntries = concat listEntries    
-    let htmlOverviews = generateUnorderedList concatEntries 
+    let concatEntries = concat listEntries
+    let htmlOverviews = generateUnorderedList concatEntries
     htmlString $ generateHeader ++ htmlOverviews
 
 
 startAction :: ActionM ()
 startAction = do
-  pathId <- captureParam "id"
+  pathId <- captureParam "quiz"
   quizName <- liftIO $ getNameById pathId
-  let title = generateTitle quizName
+  let title = generateTitle ("Starting " ++ quizName)
   let form = generateFormHtml pathId
   htmlString $ generateHeader ++ title ++ form
-  
+
 
 postQuizStart :: ActionM ()
 postQuizStart = do
-  qId <- captureParam "id"
-  playername <- formParam "playername"
+  qId <- captureParam "quiz"
+  player <- formParam "player"
 
   -- create player file here
+  _ <- liftIO $ createPlayerFile qId player
 
   -- redirect to first question
-  redirect $ LT.pack ("/quiz/" ++ qId ++ "/" ++ "0" ++ "?player=" ++ playername)
+  redirect $ LT.pack ("/quiz/" ++ qId ++ "/" ++ "0" ++ "?player=" ++ player)
 
 
 quizQuestionByIdForPlayer :: ActionM ()
 quizQuestionByIdForPlayer = do
-  qId <- captureParam "id"
-  -- TODO get right para
-  questionNo <- captureParam "question"
+  qId <- captureParam "quiz"
+  qNo <- captureParam "question?player="
   player <- queryParam "player"
 
-
-  htmlString $ e "To" (qId ++ questionNo ++ player)
+  questions <- liftIO $ readQuizFileById qId
+  if qNo < length questions
+    then htmlString $ generateHeader
+      ++ generateQuestionHtml qId (show qNo) player (questions!!qNo)
+    else redirect $ LT.pack ("/quiz/" ++ qId ++ "/result")
 
 
 postQuestionByIdForPlayer :: ActionM ()
 postQuestionByIdForPlayer = do
-  htmlString $ e "To" "Do"
+  qId <- captureParam "quiz"
+  qNo <- captureParam "question?player="
+  player <- queryParam "player"
+  -- uncmment tmr: answer <- formParam "answer"
+
+  let qNoInt = read qNo :: Int
+  -- TODO save data to file
+
+  redirect $ LT.pack ("/quiz/" ++ qId ++ "/" ++  show (qNoInt + 1) ++ "?player=" ++ player)
 
 
 getQuizResultsById :: ActionM ()
