@@ -64,8 +64,8 @@ generateQuestionHtml q_Id qNo player quest = let
     form = ea "form" [
         ("action", "/quiz/" ++ q_Id ++ "/" ++ qNo ++ "?player=" ++ player), 
         ("method", "post")] 
-        (qText ++ answers ++ submit)
-    in form
+        (answers ++ submit)
+    in qText ++ form
 
 
 -- answers

@@ -1,6 +1,6 @@
 module Haqu.Storage where
 
-import System.Directory (listDirectory, doesDirectoryExist, createDirectory)
+import System.Directory (listDirectory, doesDirectoryExist, createDirectory, doesFileExist, removeFile)
 import Data.List (find, isPrefixOf, elemIndices)
 import Data.Char (isDigit)
 --import Haqu.Models
@@ -22,6 +22,14 @@ data Question = MkQuestion {
 } deriving (Show)
 
 
+-- results
+getAmountOfAnswersByQuizId :: String -> IO Int
+getAmountOfAnswersByQuizId quizId = do
+    quizContent <- readFile $ "./data/" ++ quizId ++ ".txt"
+    let amount = length $ findAllValues "Q:" $ lines quizContent
+    return amount
+
+
 -- create
 createPlayerFile :: String -> String -> IO ()
 createPlayerFile quizId playername = do
@@ -32,6 +40,13 @@ createPlayerFile quizId playername = do
     if not dirExists
         then createDirectory dirPath
         else return ()
+
+    exists <- doesFileExist filePath
+    if exists
+        then do
+            removeFile filePath
+        else do
+            return ()
 
     appendFile filePath ""
 
@@ -84,6 +99,29 @@ stringToAnswer str
     | str == "False" = BoolVal False
     | all isDigit str = IntVal $ read str
     | otherwise = IntVal $ -1
+
+
+-- answers
+updateAnswerFile :: String -> String -> String -> String -> IO ()
+updateAnswerFile quizId questionNo player panswer = do
+    let fp = "./data/" ++ quizId ++ "/" ++ player ++ ".txt"
+    if questionNo == "0"
+        then removeFile fp
+        else return ()
+
+    _ <- appendFile fp (questionNo ++ ":" ++ panswer ++ "\n")
+
+    return ()
+
+
+--TODO remove
+updateAnswer :: Int -> [String] -> String -> [String]
+updateAnswer quesNo content update = if quesNo < length content
+    then let
+        firstHalf = take quesNo content
+        secondHalf = drop (quesNo + 1) content
+        in firstHalf ++ [show quesNo ++ ":" ++ update] ++ secondHalf
+    else content
 
 
 -- overviews

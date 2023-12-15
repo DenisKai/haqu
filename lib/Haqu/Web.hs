@@ -7,7 +7,7 @@ import Control.Monad.IO.Class (liftIO)
 import qualified Data.Text.Lazy as LT
 import Haqu.Storage
     ( getQuizOverviews,
-      getNameById, createPlayerFile, readQuizFileById )
+      getNameById, createPlayerFile, readQuizFileById, updateAnswerFile)
 import Haqu.View
 
 type Html = String
@@ -85,10 +85,10 @@ postQuestionByIdForPlayer = do
   qId <- captureParam "quiz"
   qNo <- captureParam "question?player="
   player <- queryParam "player"
-  -- uncmment tmr: answer <- formParam "answer"
+  answer <- formParam "answer"
 
   let qNoInt = read qNo :: Int
-  -- TODO save data to file
+  _ <- liftIO $ updateAnswerFile qId qNo player answer
 
   redirect $ LT.pack ("/quiz/" ++ qId ++ "/" ++  show (qNoInt + 1) ++ "?player=" ++ player)
 
