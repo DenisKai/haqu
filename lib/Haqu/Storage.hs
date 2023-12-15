@@ -1,7 +1,7 @@
 module Haqu.Storage where
 
 import System.Directory (listDirectory, doesDirectoryExist, createDirectory, doesFileExist, removeFile)
-import Data.List (find, isPrefixOf, elemIndices)
+import Data.List (find, isPrefixOf, elemIndices, transpose)
 import Data.Char (isDigit)
 --import Haqu.Models
 
@@ -21,16 +21,91 @@ data Question = MkQuestion {
     answer :: Answer
 } deriving (Show)
 
+type Player = String
+type QuestionId = Int
+type AnswerVal = String
+type Result = Int
+type Correct = Int
+type QuestionAnswer = (String, String)
 
--- results
-getAmountOfAnswersByQuizId :: String -> IO Int
-getAmountOfAnswersByQuizId quizId = do
-    quizContent <- readFile $ "./data/" ++ quizId ++ ".txt"
-    let amount = length $ findAllValues "Q:" $ lines quizContent
-    return amount
+data QuizStats = MkQuizStats {
+    playerAnswers :: [(Player, [((QuestionId, AnswerVal), Correct)])],
+    resultsQuestion :: [(QuestionId, Result)]
+} deriving (Show)
+
+-- statistics
+getQuizStatisticsByQuizId :: String -> IO QuizStats
+getQuizStatisticsByQuizId quizId = do
+    results <- getResultsByQuizId quizId
+
+    let answersPerPlayer = map snd results
+    let tansposedAnswers = transpose answersPerPlayer
+    let statsPerQuestion = map buildStatsPerQuestion tansposedAnswers
+
+    return $ MkQuizStats {
+        playerAnswers= results,
+        resultsQuestion= statsPerQuestion
+    }
 
 
--- create
+buildStatsPerQuestion :: [((QuestionId, AnswerVal), Correct)] -> (QuestionId, Int)
+buildStatsPerQuestion [] = (-1, 0)
+buildStatsPerQuestion (((quId, _), correct):as) = (quId, correct + snd (buildStatsPerQuestion as))
+
+
+getResultsByQuizId :: String -> IO [(Player, [((QuestionId, AnswerVal), Correct)])]
+getResultsByQuizId quizdId = do
+    answerFiles <- getAnswerFilesByQuizid quizdId
+    let paths = map (("./data/"++ quizdId ++ "/") ++) answerFiles
+
+    panswers <- loadAnswers paths
+    let players = map removeFileExtension answerFiles
+    let questionIdAnswer = map (concatQuestionIdToAnswer . lines) panswers
+    quiz <- readFile ("./data/" ++ quizdId ++ ".txt")
+    let trueAnswers = findAllValues "S:" $ lines quiz
+    let playerAnswerList = map (checkAnsToSol trueAnswers) questionIdAnswer
+    let zipped = zip players playerAnswerList
+
+    return zipped
+
+
+checkAnsToSol :: [String] -> [(QuestionId, AnswerVal)] -> [((QuestionId, AnswerVal), Correct)]
+checkAnsToSol _ [] = []
+checkAnsToSol sol ((quI, ans): as) = let
+    elemSol = sol!!quI
+    correct = if ans == elemSol
+        then 1
+        else 0
+    in ((quI,ans), correct) : checkAnsToSol sol as
+
+
+concatQuestionIdToAnswer :: [String] -> [(QuestionId, AnswerVal)]
+concatQuestionIdToAnswer [] = []
+concatQuestionIdToAnswer (x:xs) = let
+    index = read $ takeWhile (/=':') x
+    panswer = drop 1 $ dropWhile (/=':') x
+    others = concatQuestionIdToAnswer xs
+    in (index, panswer) : others
+
+
+loadAnswers :: [FilePath] -> IO [String]
+loadAnswers [] = do
+    return [[]]
+loadAnswers (x:xs) = do
+    aCon <- readFile x
+    rest <- loadAnswers xs
+    let joined = aCon : rest
+    return $ filter (not . null) joined
+
+
+getAnswerFilesByQuizid :: String -> IO [FilePath]
+getAnswerFilesByQuizid quizId = do
+    files <- listDirectory ("./data/" ++ quizId ++ "/")
+    let filteredFiles = filter (\file -> getExtension file == "txt") files
+    return filteredFiles
+
+
+-- player
 createPlayerFile :: String -> String -> IO ()
 createPlayerFile quizId playername = do
     let dirPath = "./data/" ++ quizId
@@ -47,7 +122,6 @@ createPlayerFile quizId playername = do
             removeFile filePath
         else do
             return ()
-
     appendFile filePath ""
 
 
@@ -55,8 +129,6 @@ createPlayerFile quizId playername = do
 readQuizFileById :: FilePath -> IO [Question]
 readQuizFileById fileId = do
     content <- readFile ("./data/" ++ fileId ++ ".txt")
-
-    -- drop everything before fist question
     let trimmed = dropWhile (not . isPrefixOf "TYPE:") (lines content)
     let filtered = filter (/="") trimmed
 
@@ -114,17 +186,7 @@ updateAnswerFile quizId questionNo player panswer = do
     return ()
 
 
---TODO remove
-updateAnswer :: Int -> [String] -> String -> [String]
-updateAnswer quesNo content update = if quesNo < length content
-    then let
-        firstHalf = take quesNo content
-        secondHalf = drop (quesNo + 1) content
-        in firstHalf ++ [show quesNo ++ ":" ++ update] ++ secondHalf
-    else content
-
-
--- overviews
+-- quiz overviews
 getQuizFilesFromData :: FilePath -> IO [FilePath]
 getQuizFilesFromData directory = do
     files <- listDirectory directory

@@ -40,15 +40,15 @@ generateFormHtml quizId = let
     breakTag = e "br" []
     labelinput = ea "label" [("for", "player")] "Please enter your name:"
     textinput = ea "input" [
-        ("type", "text"), 
-        ("id", "player"), 
+        ("type", "text"),
+        ("id", "player"),
         ("name", "player")] ""
     submit = ea "input" [
-        ("type", "submit"), 
+        ("type", "submit"),
         ("value", "Start Quiz")] ""
     form = ea "form" [
-        ("action", "/quiz/" ++ quizId ++ "/start"), 
-        ("method", "post")] 
+        ("action", "/quiz/" ++ quizId ++ "/start"),
+        ("method", "post")]
         (labelinput ++ breakTag ++ textinput ++ breakTag ++ submit)
     in form
 
@@ -59,11 +59,11 @@ generateQuestionHtml q_Id qNo player quest = let
     qText = generateTitle (question quest)
     answers = generateAnswersHtml (qType quest) (answerTexts quest)
     submit = ea "input" [
-        ("type", "submit"), 
+        ("type", "submit"),
         ("value", "Submit Answer")] ""
     form = ea "form" [
-        ("action", "/quiz/" ++ q_Id ++ "/" ++ qNo ++ "?player=" ++ player), 
-        ("method", "post")] 
+        ("action", "/quiz/" ++ q_Id ++ "/" ++ qNo ++ "?player=" ++ player),
+        ("method", "post")]
         (answers ++ submit)
     in qText ++ form
 
@@ -80,7 +80,7 @@ generateSingelChoiceAnswerHtml _ [] = []
 generateSingelChoiceAnswerHtml aNo (x:xs) = let
   breakHtml = e "br" []
   inputHtml = ea "input" [
-    ("type", "radio"), 
+    ("type", "radio"),
     ("id", show aNo),
     ("name", "answer"),
     ("value", show aNo)] ""
@@ -98,7 +98,11 @@ generateFalseTrueAnswerHtml =
   ++ e "br" []
 
 -- results
-
+generateTableHtml :: Html
+generateTableHtml = let
+  tableHeader = ea "tr" [] (ea "th" [] "Player")
+  table = ea "table" [] tableHeader
+  in table
 
 
 -- Html DSL

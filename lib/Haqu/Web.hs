@@ -7,10 +7,17 @@ import Control.Monad.IO.Class (liftIO)
 import qualified Data.Text.Lazy as LT
 import Haqu.Storage
     ( getQuizOverviews,
-      getNameById, createPlayerFile, readQuizFileById, updateAnswerFile)
+      getNameById, createPlayerFile, readQuizFileById, updateAnswerFile, getQuizStatisticsByQuizId)
 import Haqu.View
+    ( Html,
+      generateUnorderedList,
+      generateHeader,
+      generateTitle,
+      generateOverviewHtml,
+      generateFormHtml,
+      generateQuestionHtml, generateTableHtml )
+import Data.List (intersperse)
 
-type Html = String
 
 
 main :: IO ()
@@ -95,8 +102,24 @@ postQuestionByIdForPlayer = do
 
 getQuizResultsById :: ActionM ()
 getQuizResultsById = do
-  htmlString $ e "To" "Do"
+  qId <- captureParam "quiz"
+  statistics <- liftIO $ getQuizStatisticsByQuizId qId
+  
+
+  htmlString $ generateHeader ++ generateTitle "Results: placeholder" ++ generateTableHtml
 
 
 htmlString :: String -> ActionM ()
 htmlString = html . LT.pack
+
+
+-- Html DSL
+e :: String -> Html -> Html
+e tag = ea tag []
+
+
+ea :: String -> [(String, String)] -> Html -> Html
+ea tag attrs kids = concat $ ["<", tag] ++ attrsHtml attrs ++ [">", kids, "</", tag, ">"]
+  where attrsHtml [] = []
+        attrsHtml as = " " : intersperse " " (map attrHtml as)
+        attrHtml (key, value) = key ++ "='" ++ value ++ "'"
