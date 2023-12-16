@@ -1,37 +1,24 @@
 module Haqu.Storage where
 
-import System.Directory (listDirectory, doesDirectoryExist, createDirectory, doesFileExist, removeFile)
+import System.Directory
+    (
+      listDirectory,
+      doesDirectoryExist,
+      createDirectory,
+      doesFileExist,
+      removeFile)
 import Data.List (find, isPrefixOf, elemIndices, transpose)
 import Data.Char (isDigit)
---import Haqu.Models
+import Haqu.Models
+    ( Question(..),
+      Answer(..),
+      QuizOverview(..),
+      QuizStats(..),
+      Correct,
+      AnswerVal,
+      QuestionId,
+      Player )
 
-data QuizOverview = MkQuizOverview {
-    qId :: String,
-    name :: String,
-    desc :: String,
-    link :: String
-} deriving (Show)
-
-data Answer = BoolVal Bool | IntVal Int deriving (Show)
-
-data Question = MkQuestion {
-    qType :: String,
-    question :: String,
-    answerTexts :: [String],
-    answer :: Answer
-} deriving (Show)
-
-type Player = String
-type QuestionId = Int
-type AnswerVal = String
-type Result = Int
-type Correct = Int
-type QuestionAnswer = (String, String)
-
-data QuizStats = MkQuizStats {
-    playerAnswers :: [(Player, [((QuestionId, AnswerVal), Correct)])],
-    resultsQuestion :: [(QuestionId, Result)]
-} deriving (Show)
 
 -- statistics
 getQuizStatisticsByQuizId :: String -> IO QuizStats
@@ -50,7 +37,8 @@ getQuizStatisticsByQuizId quizId = do
 
 buildStatsPerQuestion :: [((QuestionId, AnswerVal), Correct)] -> (QuestionId, Int)
 buildStatsPerQuestion [] = (-1, 0)
-buildStatsPerQuestion (((quId, _), correct):as) = (quId, correct + snd (buildStatsPerQuestion as))
+buildStatsPerQuestion (((quId, _), correct):as) =
+    (quId, correct + snd (buildStatsPerQuestion as))
 
 
 getResultsByQuizId :: String -> IO [(Player, [((QuestionId, AnswerVal), Correct)])]
@@ -231,6 +219,11 @@ createQuizOverview (x:xs) = createQuizOverview [x] ++ createQuizOverview xs
 
 
 -- helper methods
+doesQuizExist :: String -> IO Bool
+doesQuizExist quizId = do
+    doesFileExist ("./data/" ++ quizId ++ ".txt")
+
+
 findAllValues :: String -> [String] -> [String]
 findAllValues key = map (drop (length key)) . filter (startsWith key)
 

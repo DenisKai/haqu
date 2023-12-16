@@ -1,0 +1,33 @@
+
+
+NAME:Star Wars Quiz
+DESC:A quiz about Star Wars
+TYPE:SINGLECHOICE
+Q:Who is the main protagonist in Star Wars: Episode IV - A New Hope?
+A:Luke Skywalker
+A:Han Solo
+A:Princess Leia
+S:0
+TYPE:FALSETRUE
+Q:Darth Vader is Luke Skywalker's father.
+S:True
+
+TYPE:SINGLECHOICE
+Q:What is the weapon used by Jedi and Sith in lightsaber duels?
+A:Blaster
+A:Phaser
+A:Lightsaber
+S:2
+
+
+TYPE:FALSETRUE
+Q:The Millennium Falcon is a type of spaceship in Star Wars.
+S:True
+
+TYPE:SINGLECHOICE
+Q:Who is the mastermind behind the construction of the Death Star?
+A:Emperor Palpatine
+
+A:Darth Vader
+A:Grand Moff Tarkin
+S:2

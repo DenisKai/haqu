@@ -1,7 +1,10 @@
 module Haqu.View where
 
 import Data.List (intersperse)
-import Haqu.Storage (QuizOverview (..), Question (qType, answerTexts, question))
+import Haqu.Models
+    ( Question(answerTexts, question, qType),
+      QuizOverview(link, qId, name, desc),
+      QuizStats (resultsQuestion, playerAnswers), QuestionId, Result, Player, AnswerVal, Correct)
 
 
 type Html = String
@@ -11,6 +14,12 @@ type Html = String
 generateUnorderedList :: String -> Html
 generateUnorderedList = ea "ul" []
 
+
+generateHeadHtml :: Html
+generateHeadHtml = let
+  meta = ea "meta" [("charset", "utf-8")] ""
+  linkTag = ea "link" [("rel", "stylesheet"), ("href", "styles.css")] ""
+  in ea "head" [] (meta ++ linkTag)
 
 
 --- header
@@ -90,19 +99,56 @@ generateSingelChoiceAnswerHtml aNo (x:xs) = let
 
 generateFalseTrueAnswerHtml :: Html
 generateFalseTrueAnswerHtml =
-  ea "input" [("type", "radio"), ("id", "true"), ("name", "answer"), ("value", "True")] ""
+  ea "input"
+    [("type", "radio"), ("id", "true"), ("name", "answer"), ("value", "True")] ""
   ++ ea "label" [("for", "true")] "True"
   ++ e "br" []
-  ++ ea "input" [("type", "radio"), ("id", "false"), ("name", "answer"), ("value", "False")] ""
+  ++ ea "input"
+    [("type", "radio"), ("id", "false"), ("name", "answer"), ("value", "False")] ""
   ++ ea "label" [("for", "false")] "False"
   ++ e "br" []
 
+
 -- results
-generateTableHtml :: Html
-generateTableHtml = let
-  tableHeader = ea "tr" [] (ea "th" [] "Player")
-  table = ea "table" [] tableHeader
-  in table
+generateTableHtml :: QuizStats -> Html
+generateTableHtml stats = if length (playerAnswers stats) > 0
+  then let
+    th = ea "tr" [] $ e "th" "Player" ++ generateTableHeaderHtml (resultsQuestion stats)
+    tRow = generateTableRowHtml (playerAnswers stats)
+    tFooter = generateTableFooter (length $ playerAnswers stats) (resultsQuestion stats)
+    table = ea "table" [] (th ++ tRow ++ tFooter)
+    in table
+  else generateTitle "Keine Statistik verfügbar."
+
+
+generateTableHeaderHtml :: [(QuestionId, Result)] -> Html
+generateTableHeaderHtml [] = ""
+generateTableHeaderHtml ((questionId, _):xs) =
+  ea "th" [] ("Q" ++ show questionId) ++ generateTableHeaderHtml xs
+
+
+generateTableRowHtml :: [(Player, [((QuestionId, AnswerVal), Correct)])] -> Html
+generateTableRowHtml [] = ""
+generateTableRowHtml ((player, answers):xs) = let
+  answersTag = concatMap (\((_, answer), correct) -> generateRow answer correct) answers
+  playerTag = ea "th" [] player
+  in ea "tr" [] (playerTag ++ answersTag) ++ generateTableRowHtml xs
+
+
+generateRow :: AnswerVal -> Correct -> Html
+generateRow answer correct = let
+  style = if correct == 1
+    then "correct"
+    else "wrong"
+  in ea "td" [("class", style)] answer
+
+
+generateTableFooter :: Int -> [(QuestionId, Result)] -> Html
+generateTableFooter noPlayers results = let
+  resultTag =
+    concatMap (\(_, result) -> ea "td" [] (show result ++ " / " ++ show noPlayers)) results
+  statisticTH = ea "th" [] "Statistics"
+  in ea "tr" [] (statisticTH ++ resultTag)
 
 
 -- Html DSL
