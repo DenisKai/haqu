@@ -64,10 +64,15 @@ homeAction :: ActionM ()
 homeAction = do
   liftIO (putStrLn "DEBUG: Home Action Called")
   quizoverviews <- liftIO $ getQuizOverviews "./data/"
-  let listEntries = map generateOverviewHtml quizoverviews
-  let concatEntries = concat listEntries
-  let htmlOverviews = generateUnorderedList concatEntries
-  htmlString $ generateHeader ++ htmlOverviews
+
+  if length quizoverviews > 0
+    then do
+      let listEntries = map generateOverviewHtml quizoverviews
+      let concatEntries = concat listEntries
+      let htmlOverviews = generateUnorderedList concatEntries
+      htmlString $ generateHeader ++ htmlOverviews
+    else do
+      htmlString $ generateHeader ++ generateTitle "No quizzes available"
 
 
 {-| 
