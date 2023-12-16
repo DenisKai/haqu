@@ -1,0 +1,34 @@
+NAME:Magic: The Gathering Quiz
+DESC:A quiz about the card game Magic: The Gathering
+
+TYPE:SINGLECHOICE
+Q:What is the name of the first Magic: The Gathering set ever released?
+A:Alpha
+A:Beta
+A:Unlimited
+S:0
+
+TYPE:FALSETRUE
+Q:Black Lotus is considered one of the most powerful and expensive Magic cards.
+S:True
+
+TYPE:SINGLECHOICE
+Q:What color is associated with direct damage spells and aggressive creatures?
+A:Blue
+
+A:Red
+
+A:Green
+Y:hahafake
+S:1
+
+TYPE:FALSETRUE
+Q:The "Planeswalker" card type was introduced in the Lorwyn set.
+S:False
+
+TYPE:SINGLECHOICE
+Q:What is the primary resource used to cast spells in Magic: The Gathering?
+A:Gold
+A:Mana
+A:Energy
+S:1

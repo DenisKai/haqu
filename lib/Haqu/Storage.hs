@@ -1,3 +1,4 @@
+-- | This module has the functionality for the persistence off all data in it.
 module Haqu.Storage where
 
 import System.Directory
@@ -17,10 +18,14 @@ import Haqu.Models
       Correct,
       AnswerVal,
       QuestionId,
-      Player )
+      Player ) 
 
 
--- statistics
+{-|
+    Get the statistics from a specific quiz.
+    Maps the answer given per player and the amount of correct answers per question.
+    Returns the results in a QuizStats Object.
+-}
 getQuizStatisticsByQuizId :: String -> IO QuizStats
 getQuizStatisticsByQuizId quizId = do
     results <- getResultsByQuizId quizId
@@ -35,12 +40,26 @@ getQuizStatisticsByQuizId quizId = do
     }
 
 
+{-| 
+    Takes a list of one question, answers and if they're correct.
+    Builds the statistics of how many times the question was answered correctly
+    and puts it into a Tuple of QuestionId and how many times it was answered correctly.
+-}
 buildStatsPerQuestion :: [((QuestionId, AnswerVal), Correct)] -> (QuestionId, Int)
 buildStatsPerQuestion [] = (-1, 0)
 buildStatsPerQuestion (((quId, _), correct):as) =
     (quId, correct + snd (buildStatsPerQuestion as))
 
 
+{-| 
+    Builds the results for each player participating in a quiz, identified by its ID.
+    Reads all answers files and transforms the data to the format of a list:
+    - Tuple that hold player and inner list of the players answers to each question.
+    - Correct is if the question is answered correctly
+    
+    Returns the zipped data of playername and questions per player 
+    (reverse so to keep order of answers).
+-}
 getResultsByQuizId :: String -> IO [(Player, [((QuestionId, AnswerVal), Correct)])]
 getResultsByQuizId quizdId = do
     answerFiles <- getAnswerFilesByQuizid quizdId
@@ -54,9 +73,13 @@ getResultsByQuizId quizdId = do
     let playerAnswerList = map (checkAnsToSol trueAnswers) questionIdAnswer
     let zipped = zip players playerAnswerList
 
-    return zipped
+    return $ reverse zipped
 
 
+{-| 
+    Checks a players answers against given questions solution.
+    Returns a list of given answers and if they were answered correctly.
+-}
 checkAnsToSol :: [String] -> [(QuestionId, AnswerVal)] -> [((QuestionId, AnswerVal), Correct)]
 checkAnsToSol _ [] = []
 checkAnsToSol sol ((quI, ans): as) = let
@@ -67,6 +90,9 @@ checkAnsToSol sol ((quI, ans): as) = let
     in ((quI,ans), correct) : checkAnsToSol sol as
 
 
+{-| 
+    Splits the given String-answer to a Tuple of question Id and Answervalue.
+-}
 concatQuestionIdToAnswer :: [String] -> [(QuestionId, AnswerVal)]
 concatQuestionIdToAnswer [] = []
 concatQuestionIdToAnswer (x:xs) = let
@@ -76,6 +102,10 @@ concatQuestionIdToAnswer (x:xs) = let
     in (index, panswer) : others
 
 
+{-| 
+    Loads the answer-files of given list of filepath.
+    Returns their content in a list of strings.
+-}
 loadAnswers :: [FilePath] -> IO [String]
 loadAnswers [] = do
     return [[]]
@@ -86,6 +116,10 @@ loadAnswers (x:xs) = do
     return $ filter (not . null) joined
 
 
+{-|
+    Returs the existing files (as list of full dynamic paths) for a specific quiz.
+    Identified by Quiz Id.
+-}
 getAnswerFilesByQuizid :: String -> IO [FilePath]
 getAnswerFilesByQuizid quizId = do
     files <- listDirectory ("./data/" ++ quizId ++ "/")
@@ -93,7 +127,12 @@ getAnswerFilesByQuizid quizId = do
     return filteredFiles
 
 
--- player
+{-|
+    Creates a players answer file for a specific quiz.
+    If the answers-directory doesn't exist, creates the corresponding directory.
+
+    Takes the quizId and the players name.
+-}
 createPlayerFile :: String -> String -> IO ()
 createPlayerFile quizId playername = do
     let dirPath = "./data/" ++ quizId
@@ -106,20 +145,22 @@ createPlayerFile quizId playername = do
 
     exists <- doesFileExist filePath
     if exists
-        then do
-            removeFile filePath
-        else do
-            return ()
+        then do removeFile filePath
+        else do return ()
     appendFile filePath ""
 
 
--- questions
-readQuizFileById :: FilePath -> IO [Question]
-readQuizFileById fileId = do
+{-|
+    Reads a quiz file by given quiz id.
+    Returns a list of questions from corresponding quiz.
+-}
+getQuestionsFromQuizById :: FilePath -> IO [Question]
+getQuestionsFromQuizById fileId = do
     content <- readFile ("./data/" ++ fileId ++ ".txt")
     let trimmed = dropWhile (not . isPrefixOf "TYPE:") (lines content)
     let filtered = filter (/="") trimmed
 
+    -- Removes the first index of where to split the questions due to be always index 0.
     let qIndices = drop 1 $ elemIndices True (map (startsWith "TYPE:") filtered)
     let splitList = splitAtIndices qIndices filtered
 
@@ -128,6 +169,11 @@ readQuizFileById fileId = do
     return questions
 
 
+{-|
+    Split a list at given indices.
+    Indices are a list of int (containing the indices).
+    List of strings is filecontent.
+-}
 splitAtIndices :: [Int] -> [String] -> [[String]]
 splitAtIndices [] _ = []
 splitAtIndices [x] content =
@@ -138,6 +184,11 @@ splitAtIndices (x:xs) content =
     in firstH : splitAtIndices (map (subtract x) xs) secondH
 
 
+{-|
+    Takes list of quiz-file-contents.
+    Creates a Question out of the contents of a quiz file.
+    The contents of the quiz are cut up into the lines of the corresponding quiz file.
+-}
 createQuestions :: [[String]] -> [Question]
 createQuestions [] = []
 createQuestions (x:xs) =
@@ -153,6 +204,11 @@ createQuestions (x:xs) =
     in makeQuestion : createQuestions xs
 
 
+{-|
+    Converts a answer-string to Answer type. 
+    If its a Bool -> Boolval, else IntVal; 
+    If it isn't a digit or bool Intval -> -1 / invalid answer
+-}
 stringToAnswer :: String -> Answer
 stringToAnswer str
     | str == "True" = BoolVal True
@@ -161,7 +217,11 @@ stringToAnswer str
     | otherwise = IntVal $ -1
 
 
--- answers
+{-|
+    Updates the answerfile of a player.
+    Identiied by quizId, the answered question, the player and their answer.
+    Starts a new player-answer file if the question id is the first of quiz (question id == 0).
+-}
 updateAnswerFile :: String -> String -> String -> String -> IO ()
 updateAnswerFile quizId questionNo player panswer = do
     let fp = "./data/" ++ quizId ++ "/" ++ player ++ ".txt"
@@ -170,11 +230,10 @@ updateAnswerFile quizId questionNo player panswer = do
         else return ()
 
     _ <- appendFile fp (questionNo ++ ":" ++ panswer ++ "\n")
-
     return ()
 
 
--- quiz overviews
+-- | Returns all quiz-files (.txt) of given folder/path 
 getQuizFilesFromData :: FilePath -> IO [FilePath]
 getQuizFilesFromData directory = do
     files <- listDirectory directory
@@ -182,6 +241,10 @@ getQuizFilesFromData directory = do
     return filteredFiles
 
 
+{-|
+    Creates dictionaries of all quizzes of given folder.
+    Key of dict is the quiz Id, Value is the contents of the quiz, split by \n
+-}
 getQuizDicts :: FilePath -> IO [(FilePath, [String])]
 getQuizDicts path = do
     files <- getQuizFilesFromData path
@@ -193,6 +256,7 @@ getQuizDicts path = do
     return dictQuiz
 
 
+-- | Gets the overviews of all quizzes in a given folder
 getQuizOverviews :: FilePath -> IO [QuizOverview]
 getQuizOverviews path = do
     quizDicts <- getQuizDicts path
@@ -201,12 +265,17 @@ getQuizOverviews path = do
     return $ reverse quizoverviews
 
 
+-- | Get the name if quiz by its given id-parameter
 getNameById :: String -> IO String
 getNameById quizId = do
     file <- readFile ("./data/" ++ quizId ++ ".txt")
     return $ findValue "NAME:" (lines file)
 
 
+{-|
+    Creates a list of QuizOverview with given list of tuples.
+    Containing quizId and the content of the quiz.
+-}
 createQuizOverview :: [([Char], [String])] -> [QuizOverview]
 createQuizOverview [] = []
 createQuizOverview [(quizId, content)] =
@@ -218,34 +287,56 @@ createQuizOverview [(quizId, content)] =
 createQuizOverview (x:xs) = createQuizOverview [x] ++ createQuizOverview xs
 
 
--- helper methods
+-- Helper Functions Section
+-- | Checks if quiz with given Id exists
 doesQuizExist :: String -> IO Bool
 doesQuizExist quizId = do
     doesFileExist ("./data/" ++ quizId ++ ".txt")
 
 
+-- | Checks if solution directory of given quiz Id exists
+doesDirExist :: String -> IO ()
+doesDirExist quizId = do
+    dirExists <- doesDirectoryExist ("./data/" ++ quizId)
+    if dirExists
+        then return ()
+        else createDirectory ("./data/" ++ quizId)
+
+
+-- | Finds all keys in a list of strings and returns corresponding values
 findAllValues :: String -> [String] -> [String]
 findAllValues key = map (drop (length key)) . filter (startsWith key)
 
 
+-- | Finds a single key in a list of strings and returns value
 findValue :: String -> [String] -> String
 findValue key =
     maybe "Key not found" (drop (length key)) . find (startsWith key)
 
 
+{-| 
+    Checks if type a starts with given prefix (of same type).
+    Returns Bool True if prefix exists.
+-}
 startsWith :: Eq a => [a] -> [a] -> Bool
 startsWith prefix x = take (length prefix) x == prefix
 
 
+-- | Catches the extension of given FilePath/file and returns it
 getExtension :: FilePath -> FilePath
 getExtension filePath =
     takeWhile (/= '.') (fst (break (=='/') (reverse filePath)))
 
 
+-- | Removes the extension of given FilePath/file and returns filename
 removeFileExtension :: FilePath -> FilePath
 removeFileExtension = takeWhile (/='.')
 
 
+{-|
+    Reads all files in given list of Filepaths.
+    Returns a list of Strings containing the files contents.
+-}
 parseFiles :: [FilePath] -> IO [String]
 parseFiles [] = do
     return []
